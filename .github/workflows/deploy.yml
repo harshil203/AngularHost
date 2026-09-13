@@ -1,0 +1,55 @@
+name: Deploy Angular to GitHub Pages
+
+on:
+  push:
+    branches:
+      - development
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: doctor-website/package-lock.json
+
+      - name: Install dependencies
+        working-directory: doctor-website
+        run: npm ci
+
+      - name: Build Angular application
+        working-directory: doctor-website
+        run: npm run build
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload build artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: doctor-website/dist/doctor-website/browser
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
