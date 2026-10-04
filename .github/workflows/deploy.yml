@@ -1,4 +1,4 @@
-name: Build and Push Angular Docker Image
+name: Deploy Angular to GitHub Pages
 
 on:
   push:
@@ -7,26 +7,49 @@ on:
 
 permissions:
   contents: read
-  packages: write
+  pages: write
+  id-token: write
 
 jobs:
-  docker-build:
+  build:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          node-version: 24
+          cache: npm
+          cache-dependency-path: doctor-website/package-lock.json
 
-      - name: Build Docker image
+      - name: Install dependencies
         working-directory: doctor-website
-        run: docker build -t ghcr.io/${{ github.repository_owner }}/angularhost:latest .
+        run: npm ci
 
-      - name: Push Docker image
-        run: docker push ghcr.io/${{ github.repository_owner }}/angularhost:latest
+      - name: Build Angular application
+        working-directory: doctor-website
+        run: npm run build -- --base-href /AngularHost/
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload build artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: doctor-website/dist/doctor-website/browser
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

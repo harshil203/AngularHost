@@ -1,22 +1,13 @@
-# Stage 1: Build Angular application
-FROM node:22 AS build
+FROM node:22
 
 WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm ci
+RUN npm install
 
 COPY . .
 
-RUN npm run build -- --base-href /
+EXPOSE 4200
 
-
-# Stage 2: Serve Angular application
-FROM nginx:alpine
-
-COPY --from=build /app/dist/doctor-website/browser /usr/share/nginx/html
-
-EXPOSE 80
-
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["npx", "ng", "serve", "--host", "0.0.0.0", "--port", "4200", "--poll", "1000"]
